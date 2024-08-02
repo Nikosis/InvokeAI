@@ -26,7 +26,10 @@ import { BRUSH_SPACING_TARGET_SCALE, CANVAS_SCALE_BY, MAX_CANVAS_SCALE, MIN_CANV
  * @param stage The konva stage
  * @param setLastCursorPos The callback to store the cursor pos
  */
-const updateLastCursorPos = (stage: Konva.Stage, setLastCursorPos: CanvasManager['stateApi']['setLastCursorPos']) => {
+const updateLastCursorPos = (
+  stage: Konva.Stage,
+  setLastCursorPos: CanvasManager['stateApi']['$lastCursorPos']['set']
+) => {
   const pos = getScaledCursorPosition(stage);
   if (!pos) {
     return null;
@@ -118,16 +121,14 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
     getCurrentFill,
     setTool,
     setToolBuffer,
-    setIsMouseDown,
-    setLastMouseDownPos,
-    getLastCursorPos,
-    setLastCursorPos,
+    $isMouseDown,
+    $lastMouseDownPos,
+    $lastCursorPos,
     // getLastAddedPoint,
-    setLastAddedPoint,
-    setStageAttrs,
-    getSelectedEntity,
-    getSpaceKey,
-    setSpaceKey,
+    $lastAddedPoint,
+    $stageAttrs,
+    $selectedEntity,
+    $spaceKey,
     getBbox,
     getSettings,
     onBrushWidthChanged,
@@ -166,10 +167,10 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
 
   //#region mousedown
   stage.on('mousedown', async (e) => {
-    setIsMouseDown(true);
+    $isMouseDown.set(true);
     const toolState = getToolState();
-    const pos = updateLastCursorPos(stage, setLastCursorPos);
-    const selectedEntity = getSelectedEntity();
+    const pos = updateLastCursorPos(stage, $lastCursorPos.set);
+    const selectedEntity = $selectedEntity.get();
     const selectedEntityAdapter = getSelectedEntityAdapter();
 
     if (
@@ -178,10 +179,10 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
       isDrawableEntity(selectedEntity) &&
       selectedEntityAdapter &&
       isDrawableEntityAdapter(selectedEntityAdapter) &&
-      !getSpaceKey() &&
+      !$spaceKey.get() &&
       getIsPrimaryMouseDown(e)
     ) {
-      setLastMouseDownPos(pos);
+      $lastMouseDownPos.set(pos);
       const normalizedPoint = offsetCoord(pos, selectedEntity.position);
 
       if (toolState.selected === 'brush') {
@@ -220,7 +221,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
             clip: getClip(selectedEntity),
           });
         }
-        setLastAddedPoint(alignedPoint);
+        $lastAddedPoint.set(alignedPoint);
       }
 
       if (toolState.selected === 'eraser') {
@@ -256,7 +257,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
             clip: getClip(selectedEntity),
           });
         }
-        setLastAddedPoint(alignedPoint);
+        $lastAddedPoint.set(alignedPoint);
       }
 
       if (toolState.selected === 'rect') {
@@ -279,9 +280,9 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
 
   //#region mouseup
   stage.on('mouseup', async () => {
-    setIsMouseDown(false);
-    const pos = getLastCursorPos();
-    const selectedEntity = getSelectedEntity();
+    $isMouseDown.set(false);
+    const pos = $lastCursorPos.get();
+    const selectedEntity = $selectedEntity.get();
     const selectedEntityAdapter = getSelectedEntityAdapter();
 
     if (
@@ -290,7 +291,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
       isDrawableEntity(selectedEntity) &&
       selectedEntityAdapter &&
       isDrawableEntityAdapter(selectedEntityAdapter) &&
-      !getSpaceKey()
+      !$spaceKey.get()
     ) {
       const toolState = getToolState();
 
@@ -321,7 +322,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
         }
       }
 
-      setLastMouseDownPos(null);
+      $lastMouseDownPos.set(null);
     }
 
     manager.preview.tool.render();
@@ -330,8 +331,8 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
   //#region mousemove
   stage.on('mousemove', async (e) => {
     const toolState = getToolState();
-    const pos = updateLastCursorPos(stage, setLastCursorPos);
-    const selectedEntity = getSelectedEntity();
+    const pos = updateLastCursorPos(stage, $lastCursorPos.set);
+    const selectedEntity = $selectedEntity.get();
     const selectedEntityAdapter = getSelectedEntityAdapter();
 
     if (
@@ -340,7 +341,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
       isDrawableEntity(selectedEntity) &&
       selectedEntityAdapter &&
       isDrawableEntityAdapter(selectedEntityAdapter) &&
-      !getSpaceKey() &&
+      !$spaceKey.get() &&
       getIsPrimaryMouseDown(e)
     ) {
       if (toolState.selected === 'brush') {
@@ -353,7 +354,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
               const alignedPoint = alignCoordForTool(normalizedPoint, toolState.brush.width);
               drawingBuffer.points.push(alignedPoint.x, alignedPoint.y);
               await selectedEntityAdapter.renderer.setBuffer(drawingBuffer);
-              setLastAddedPoint(alignedPoint);
+              $lastAddedPoint.set(alignedPoint);
             }
           } else {
             await selectedEntityAdapter.renderer.clearBuffer();
@@ -372,7 +373,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
             color: getCurrentFill(),
             clip: getClip(selectedEntity),
           });
-          setLastAddedPoint(alignedPoint);
+          $lastAddedPoint.set(alignedPoint);
         }
       }
 
@@ -386,7 +387,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
               const alignedPoint = alignCoordForTool(normalizedPoint, toolState.eraser.width);
               drawingBuffer.points.push(alignedPoint.x, alignedPoint.y);
               await selectedEntityAdapter.renderer.setBuffer(drawingBuffer);
-              setLastAddedPoint(alignedPoint);
+              $lastAddedPoint.set(alignedPoint);
             }
           } else {
             await selectedEntityAdapter.renderer.clearBuffer();
@@ -404,7 +405,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
             strokeWidth: toolState.eraser.width,
             clip: getClip(selectedEntity),
           });
-          setLastAddedPoint(alignedPoint);
+          $lastAddedPoint.set(alignedPoint);
         }
       }
 
@@ -427,10 +428,10 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
 
   //#region mouseleave
   stage.on('mouseleave', async (e) => {
-    const pos = updateLastCursorPos(stage, setLastCursorPos);
-    setLastCursorPos(null);
-    setLastMouseDownPos(null);
-    const selectedEntity = getSelectedEntity();
+    const pos = updateLastCursorPos(stage, $lastCursorPos.set);
+    $lastCursorPos.set(null);
+    $lastMouseDownPos.set(null);
+    const selectedEntity = $selectedEntity.get();
     const selectedEntityAdapter = getSelectedEntityAdapter();
     const toolState = getToolState();
 
@@ -440,7 +441,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
       isDrawableEntity(selectedEntity) &&
       selectedEntityAdapter &&
       isDrawableEntityAdapter(selectedEntityAdapter) &&
-      !getSpaceKey() &&
+      !$spaceKey.get() &&
       getIsPrimaryMouseDown(e)
     ) {
       const drawingBuffer = selectedEntityAdapter.renderer.buffer;
@@ -503,7 +504,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
         stage.scaleX(newScale);
         stage.scaleY(newScale);
         stage.position(newPos);
-        setStageAttrs({
+        $stageAttrs.set({
           position: newPos,
           dimensions: { width: stage.width(), height: stage.height() },
           scale: newScale,
@@ -516,7 +517,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
 
   //#region dragmove
   stage.on('dragmove', () => {
-    setStageAttrs({
+    $stageAttrs.set({
       position: { x: Math.floor(stage.x()), y: Math.floor(stage.y()) },
       dimensions: { width: stage.width(), height: stage.height() },
       scale: stage.scaleX(),
@@ -528,7 +529,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
   //#region dragend
   stage.on('dragend', () => {
     // Stage position should always be an integer, else we get fractional pixels which are blurry
-    setStageAttrs({
+    $stageAttrs.set({
       position: { x: Math.floor(stage.x()), y: Math.floor(stage.y()) },
       dimensions: { width: stage.width(), height: stage.height() },
       scale: stage.scaleX(),
@@ -546,17 +547,17 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
     }
     if (e.key === 'Escape') {
       // Cancel shape drawing on escape
-      setLastMouseDownPos(null);
+      $lastMouseDownPos.set(null);
     } else if (e.key === ' ') {
       // Select the view tool on space key down
       setToolBuffer(getToolState().selected);
       setTool('view');
-      setSpaceKey(true);
-      setLastCursorPos(null);
-      setLastMouseDownPos(null);
+      $spaceKey.set(true);
+      $lastCursorPos.set(null);
+      $lastMouseDownPos.set(null);
     } else if (e.key === 'r') {
-      setLastCursorPos(null);
-      setLastMouseDownPos(null);
+      $lastCursorPos.set(null);
+      $lastMouseDownPos.set(null);
       manager.background.render();
       // TODO(psyche): restore some kind of fit
     }
@@ -576,7 +577,7 @@ export const setStageEventHandlers = (manager: CanvasManager): (() => void) => {
       const toolBuffer = getToolState().selectedBuffer;
       setTool(toolBuffer ?? 'move');
       setToolBuffer(null);
-      setSpaceKey(false);
+      $spaceKey.set(false);
     }
     manager.preview.tool.render();
   };

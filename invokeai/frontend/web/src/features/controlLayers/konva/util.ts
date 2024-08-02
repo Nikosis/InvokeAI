@@ -1,6 +1,12 @@
 import { getImageDataTransparency } from 'common/util/arrayBuffer';
 import type { CanvasManager } from 'features/controlLayers/konva/CanvasManager';
-import type { CanvasObjectState, Coordinate, GenerationMode, Rect, RgbaColor } from 'features/controlLayers/store/types';
+import type {
+  CanvasObjectState,
+  Coordinate,
+  GenerationMode,
+  Rect,
+  RgbaColor,
+} from 'features/controlLayers/store/types';
 import { isValidLayer } from 'features/nodes/util/graph/generation/addLayers';
 import Konva from 'konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
@@ -64,7 +70,7 @@ export const alignCoordForTool = (coord: Coordinate, toolWidth: number): Coordin
  * Offsets a point by the given offset. The offset is subtracted from the point.
  * @param coord The coordinate to offset
  * @param offset The offset to apply
- * @returns 
+ * @returns
  */
 export const offsetCoord = (coord: Coordinate, offset: Coordinate): Coordinate => {
   return {
@@ -628,17 +634,39 @@ export type Subscription = {
   unsubscribe: () => void;
 };
 
+// /**
+//  * Builds a subscribe function for a nanostores atom.
+//  * @param subscribe The subscribe function of the atom
+//  * @param name The name of the atom
+//  * @returns A subscribe function that returns an object with the name and unsubscribe function
+//  */
+// export const buildNanostoresSubscribe = <T>(subscribe: WritableAtom<T>['subscribe'], name: string) => {
+//   return (cb: Parameters<WritableAtom<T>['subscribe']>[0]): Subscription => {
+//     return {
+//       name,
+//       unsubscribe: subscribe(cb),
+//     };
+//   };
+// };
+
 /**
  * Builds a subscribe function for a nanostores atom.
  * @param subscribe The subscribe function of the atom
  * @param name The name of the atom
  * @returns A subscribe function that returns an object with the name and unsubscribe function
  */
-export const buildSubscribe = <T>(subscribe: WritableAtom<T>['subscribe'], name: string) => {
-  return (cb: Parameters<WritableAtom<T>['subscribe']>[0]): Subscription => {
-    return {
-      name,
-      unsubscribe: subscribe(cb),
-    };
+export const buildNanostoresSubscribe = <T>(atom: WritableAtom<T>, name: string) => {
+  return {
+    ...atom,
+    onChange: (cb: Parameters<WritableAtom<T>['listen']>[0]): Subscription => {
+      return {
+        name,
+        unsubscribe: atom.listen(cb),
+      };
+    },
   };
+};
+
+export const getDefaultRect = (): Rect => {
+  return { x: 0, y: 0, width: 0, height: 0 };
 };

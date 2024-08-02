@@ -2,7 +2,6 @@ import { $alt, $ctrl, $meta, $shift } from '@invoke-ai/ui-library';
 import type { Store } from '@reduxjs/toolkit';
 import { logger } from 'app/logging/logger';
 import type { RootState } from 'app/store/store';
-import { buildSubscribe } from 'features/controlLayers/konva/util';
 import {
   $isDrawing,
   $isMouseDown,
@@ -49,12 +48,15 @@ import type {
   CanvasBrushLineState,
   CanvasEntity,
   CanvasEraserLineState,
-  PositionChangedArg,
   CanvasRectState,
+  CanvasV2State,
+  PositionChangedArg,
   ScaleChangedArg,
   Tool,
 } from 'features/controlLayers/store/types';
 import type { IRect } from 'konva/lib/types';
+import type { WritableAtom } from 'nanostores';
+import { atom } from 'nanostores';
 import type { RgbaColor } from 'react-colorful';
 import type { ImageDTO } from 'services/api/types';
 
@@ -63,8 +65,20 @@ const log = logger('canvas');
 export class CanvasStateApi {
   private store: Store<RootState>;
 
+  $toolState: WritableAtom<CanvasV2State['tool']>;
+  $selectedEntityIdentifier: WritableAtom<CanvasV2State['selectedEntityIdentifier']>;
+  $selectedEntity: WritableAtom<CanvasEntity | null>;
+  $currentFill: WritableAtom<RgbaColor>;
+
   constructor(store: Store<RootState>) {
     this.store = store;
+
+    this.$toolState = atom<CanvasV2State['tool']>(this.getToolState());
+    this.$selectedEntityIdentifier = atom<CanvasV2State['selectedEntityIdentifier']>(
+      this.getState().selectedEntityIdentifier
+    );
+    this.$selectedEntity = atom<CanvasEntity | null>(this.getSelectedEntity());
+    this.$currentFill = atom<RgbaColor>(this.getCurrentFill());
   }
 
   // Reminder - use arrow functions to avoid binding issues
@@ -250,55 +264,18 @@ export class CanvasStateApi {
     return this.store.getState().system.consoleLogLevel;
   };
 
-  // Read-only state, derived from nanostores
-  resetLastProgressEvent = () => {
-    $lastProgressEvent.set(null);
-  };
-
   // Read-write state, ephemeral interaction state
-  getIsDrawing = $isDrawing.get;
-  setIsDrawing = $isDrawing.set;
-  onIsDrawingChanged = $isDrawing.subscribe;
-
-  getIsMouseDown = $isMouseDown.get;
-  setIsMouseDown = $isMouseDown.set;
-  onIsMouseDownChanged = $isMouseDown.subscribe;
-
-  getLastAddedPoint = $lastAddedPoint.get;
-  setLastAddedPoint = $lastAddedPoint.set;
-  onLastAddedPointChanged = $lastAddedPoint.subscribe;
-
-  getLastMouseDownPos = $lastMouseDownPos.get;
-  setLastMouseDownPos = $lastMouseDownPos.set;
-  onLastMouseDownPosChanged = $lastMouseDownPos.subscribe;
-
-  getLastCursorPos = $lastCursorPos.get;
-  setLastCursorPos = $lastCursorPos.set;
-  onLastCursorPosChanged = $lastCursorPos.subscribe;
-
-  getSpaceKey = $spaceKey.get;
-  setSpaceKey = $spaceKey.set;
-  onSpaceKeyChanged = $spaceKey.subscribe;
-
-  getLastProgressEvent = $lastProgressEvent.get;
-  setLastProgressEvent = $lastProgressEvent.set;
-  onLastProgressEventChanged = $lastProgressEvent.subscribe;
-
-  getAltKey = $alt.get;
-  onAltChanged = $alt.subscribe;
-
-  getCtrlKey = $ctrl.get;
-  onCtrlChanged = $ctrl.subscribe;
-
-  getMetaKey = $meta.get;
-  onMetaChanged = $meta.subscribe;
-
-  getShiftKey = $shift.get;
-  onShiftChanged = buildSubscribe($shift.subscribe, 'onShiftChanged');
-
-  getShouldShowStagedImage = $shouldShowStagedImage.get;
-  onGetShouldShowStagedImageChanged = $shouldShowStagedImage.subscribe;
-
-  setStageAttrs = $stageAttrs.set;
-  onStageAttrsChanged = buildSubscribe($stageAttrs.subscribe, 'onStageAttrsChanged');
+  $isDrawing = $isDrawing;
+  $isMouseDown = $isMouseDown;
+  $lastAddedPoint = $lastAddedPoint;
+  $lastMouseDownPos = $lastMouseDownPos;
+  $lastCursorPos = $lastCursorPos;
+  $lastProgressEvent = $lastProgressEvent;
+  $spaceKey = $spaceKey;
+  $altKey = $alt;
+  $ctrlKey = $ctrl;
+  $metaKey = $meta;
+  $shiftKey = $shift;
+  $shouldShowStagedImage = $shouldShowStagedImage;
+  $stageAttrs = $stageAttrs;
 }

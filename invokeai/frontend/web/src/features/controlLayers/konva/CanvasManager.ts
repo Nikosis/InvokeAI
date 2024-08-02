@@ -226,7 +226,7 @@ export class CanvasManager {
   }
 
   async renderProgressPreview() {
-    await this.preview.progressPreview.render(this.stateApi.getLastProgressEvent());
+    await this.preview.progressPreview.render(this.stateApi.$lastProgressEvent.get());
   }
 
   async renderInpaintMask() {
@@ -279,7 +279,7 @@ export class CanvasManager {
   fitStageToContainer() {
     this.stage.width(this.container.offsetWidth);
     this.stage.height(this.container.offsetHeight);
-    this.stateApi.setStageAttrs({
+    this.stateApi.$stageAttrs.set({
       position: { x: this.stage.x(), y: this.stage.y() },
       dimensions: { width: this.stage.width(), height: this.stage.height() },
       scale: this.stage.scaleX(),
@@ -288,7 +288,7 @@ export class CanvasManager {
   }
 
   getTransformingLayer() {
-    return Array.from(this.layers.values()).find((layer) => layer.isTransforming);
+    return Array.from(this.layers.values()).find((layer) => layer.transformer.isTransforming);
   }
 
   getIsTransforming() {
@@ -301,15 +301,14 @@ export class CanvasManager {
     }
     const layer = this.getSelectedEntityAdapter();
     assert(layer instanceof CanvasLayer, 'No selected layer');
-    layer.startTransform();
+    layer.transformer.startTransform();
     this.onTransform?.(true);
   }
 
   async applyTransform() {
     const layer = this.getTransformingLayer();
     if (layer) {
-      await layer.rasterizeLayer();
-      layer.stopTransform();
+      await layer.transformer.applyTransform();
     }
     this.onTransform?.(false);
   }
@@ -317,7 +316,7 @@ export class CanvasManager {
   cancelTransform() {
     const layer = this.getTransformingLayer();
     if (layer) {
-      layer.stopTransform();
+      layer.transformer.stopTransform();
     }
     this.onTransform?.(false);
   }
@@ -355,15 +354,21 @@ export class CanvasManager {
       }
     }
 
+    if (this._isFirstRender || state.tool !== this._prevState.tool) {
+      this.stateApi.$toolState.set(state.tool);
+    }
+
+    if (this._isFirstRender || state.selectedEntityIdentifier !== this._prevState.selectedEntityIdentifier) {
+      this.stateApi.$selectedEntityIdentifier.set(state.selectedEntityIdentifier);
+      this.stateApi.$selectedEntity.set(this.stateApi.getSelectedEntity());
+    }
+
     if (
       this._isFirstRender ||
-      state.tool.selected !== this._prevState.tool.selected ||
-      state.selectedEntityIdentifier?.id !== this._prevState.selectedEntityIdentifier?.id
+      state.tool !== this._prevState.tool ||
+      state.selectedEntityIdentifier !== this._prevState.selectedEntityIdentifier
     ) {
-      this.log.debug('Updating interaction');
-      for (const layer of this.layers.values()) {
-        layer.updateInteraction({ toolState: state.tool, isSelected: state.selectedEntityIdentifier?.id === layer.id });
-      }
+      this.stateApi.$currentFill.set(this.stateApi.getCurrentFill());
     }
 
     if (
